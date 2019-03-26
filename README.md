@@ -10,7 +10,7 @@ To run type in : node server
 To clear and reset the database: https://boiling-brook-85767.herokuapp.com/clearall
 Video series on process of making the app: https://www.youtube.com/playlist?list=PLkOpMJMP5av2xJK_p2YTdcVtBSU6vDi8F
 
-All specs of the project were met as perscribed in the instructions below.
+All specs of the project were met as described in the instructions below.
 
 INSTRUCTIONS
 
