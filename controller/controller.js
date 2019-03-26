@@ -18,28 +18,23 @@ router.get("/scrape", function(req, res) {
     var titlesArray = [];
 
     $(".c-entry-box--compact__title").each(function(i, element) {
-      var result = [];
+      var result = {};
+
       result.title = $(this)
         .children("a")
         .text();
       result.link = $(this)
         .children("a")
         .attr("href");
-      //ensures that no empty title or links are sent to mongodb
+
       if (result.title !== "" && result.link !== "") {
-        //check for duplicates
         if (titlesArray.indexOf(result.title) == -1) {
-          // push the saved title to the array
           titlesArray.push(result.title);
 
-          // only add the article if is not already there
           Article.count({ title: result.title }, function(err, test) {
-            //if the test is 0, the entry is unique and good to save
-            if (test == 0) {
-              //using Article model, create new object
+            if (test === 0) {
               var entry = new Article(result);
 
-              //save entry to mongodb
               entry.save(function(err, doc) {
                 if (err) {
                   console.log(err);
@@ -49,9 +44,7 @@ router.get("/scrape", function(req, res) {
               });
             }
           });
-        }
-        // Log that scrape is working, just the content was missing parts
-        else {
+        } else {
           console.log("Article already exists.");
         }
       } else {
@@ -61,13 +54,9 @@ router.get("/scrape", function(req, res) {
     res.redirect("/");
   });
 });
-
-//this will grab every article and populat the DOM
 router.get("/articles", function(req, res) {
-  //allows newer articles to be on top
   Article.find()
     .sort({ _id: -1 })
-    //send to handlebars
     .exec(function(err, doc) {
       if (err) {
         console.log(err);
@@ -77,7 +66,7 @@ router.get("/articles", function(req, res) {
       }
     });
 });
-//This will get the articles we scraped from the mongodb
+
 router.get("/articles-json", function(req, res) {
   Article.find({}, function(err, doc) {
     if (err) {
@@ -87,6 +76,7 @@ router.get("/articles-json", function(req, res) {
     }
   });
 });
+
 router.get("/clearAll", function(req, res) {
   Article.remove({}, function(err, doc) {
     if (err) {
@@ -97,6 +87,7 @@ router.get("/clearAll", function(req, res) {
   });
   res.redirect("/articles-json");
 });
+
 router.get("/readArticle/:id", function(req, res) {
   var articleId = req.params.id;
   var hbsObj = {
@@ -104,7 +95,6 @@ router.get("/readArticle/:id", function(req, res) {
     body: []
   };
 
-  // //find the article at the id
   Article.findOne({ _id: articleId })
     .populate("comment")
     .exec(function(err, doc) {
@@ -113,7 +103,6 @@ router.get("/readArticle/:id", function(req, res) {
       } else {
         hbsObj.article = doc;
         var link = doc.link;
-        //grab article from link
         request(link, function(error, response, html) {
           var $ = cheerio.load(html);
 
@@ -122,9 +111,8 @@ router.get("/readArticle/:id", function(req, res) {
               .children(".c-entry-content")
               .children("p")
               .text();
-            //send article body and comments to article.handlbars through hbObj
+
             res.render("article", hbsObj);
-            //prevents loop through so it doesn't return an empty hbsObj.body
             return false;
           });
         });
@@ -140,27 +128,29 @@ router.post("/comment/:id", function(req, res) {
     name: user,
     body: content
   };
+
   var newComment = new Comment(commentObj);
+
   newComment.save(function(err, doc) {
     if (err) {
       console.log(err);
     } else {
       console.log(doc._id);
       console.log(articleId);
+
       Article.findOneAndUpdate(
         { _id: req.params.id },
         { $push: { comment: doc._id } },
         { new: true }
-      )
-        //execute everything
-        .exec(function(err, doc) {
-          if (err) {
-            console.log(err);
-          } else {
-            res.redirect("/readArticle/" + articleId);
-          }
-        });
+      ).exec(function(err, doc) {
+        if (err) {
+          console.log(err);
+        } else {
+          res.redirect("/readArticle/" + articleId);
+        }
+      });
     }
   });
 });
+
 module.exports = router;
